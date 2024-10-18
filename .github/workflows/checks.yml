@@ -9,6 +9,12 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
 
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v1
+      with:
+        username: ${{ secrets.DOCKERHUB_USER }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
     - name: Set up Docker
       run: |
         sudo apt-get update
@@ -16,3 +22,4 @@ jobs:
 
     - name: Build and Test
       run: docker-compose run --rm app sh -c "python manage.py test"
+
