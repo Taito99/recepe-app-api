@@ -11,8 +11,8 @@ jobs:
 
     - name: Set up Docker
       run: |
-        sudo systemctl start docker
-        docker info
+        sudo apt-get update
+        sudo apt-get install docker-compose
 
     - name: Build and Test
       run: docker-compose run --rm app sh -c "python manage.py test"
