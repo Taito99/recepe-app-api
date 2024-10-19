@@ -1,4 +1,4 @@
-name: Test and Lint
+name: Test
 
 on: [push]
 
@@ -21,5 +21,5 @@ jobs:
         sudo apt-get install docker-compose
 
     - name: Build and Test
-      run: docker-compose run --rm app sh -c "python manage.py test"
+      run: docker-compose run --rm app sh -c "python manage.py wait_for_db && python manage.py test"
 
