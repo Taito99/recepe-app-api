@@ -1,5 +1,5 @@
 """Views for the use Api"""
-from rest_framework import  generics
+from rest_framework import  generics, authentication, permissions
 from rest_framework_simplejwt.views import TokenObtainPairView
 from .serializers import UserSerializer, AuthTokenSerializer
 
@@ -10,3 +10,13 @@ class CreateUserView(generics.CreateAPIView):
 class CreateTokenView(TokenObtainPairView):
     """Create a new JWT token for the user"""
     serializer_class = AuthTokenSerializer
+
+class ManageUserView(generics.RetrieveUpdateAPIView):
+    """Manage the authenticated user"""
+    serializer_class = UserSerializer
+    authentication_classes = [authentication.TokenAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        """Retrieve and return authenticated user"""
+        return self.request.user
