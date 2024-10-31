@@ -4,7 +4,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 from decimal import Decimal
-from core.models import Recipe # and this works as well
+from core.models import Recipe, Tag, Ingredient # and this works as well
 from recipe.serializers import RecipeSerializer, RecipeDetailSerializer # This import works
 
 RECIPES_URL=reverse('recipe:recipe-list')
@@ -168,5 +168,88 @@ class PrivateRecipeApiTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertTrue(Recipe.objects.filter(id=recipe.id).exists())
 
+    def test_create_recipe_with_new_tag(self):
+        """Test creating a recipe with a new tag."""
+        payload = {
+            'title': "Thai Prawn",
+            'time_minutes': 10,
+            'price': Decimal('10.50'),
+            "tags": [{'name': 'Thai'}, {'name': 'Dinner'}]
+        }
+        response = self.client.post(RECIPES_URL, payload, format='json')
 
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        recipes = Recipe.objects.filter(user=self.user)
+        self.assertEqual(recipes.count(), 1)
+        recipe = recipes[0]
+        self.assertEqual(recipe.tags.count(), 2)
+        for tag in payload['tags']:
+            exists = Tag.objects.filter(name=tag['name'], user=self.user).exists()
+            self.assertTrue(exists)
 
+    def test_create_recipe_with_existing_tag(self):
+        """Test creating a recipe with an existing tag."""
+        tag_indian = Tag.objects.create(name='Indian', user=self.user)
+        payload = {
+            'title': "Thai Prawn",
+            'time_minutes': 10,
+            'price': Decimal('12.50'),
+            "tags": [{'name': 'Indian'}, {'name': 'Dinner'}]
+        }
+        response = self.client.post(RECIPES_URL, payload, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        recipes = Recipe.objects.filter(user=self.user)
+        self.assertEqual(recipes.count(), 1)
+        recipe = recipes[0]
+        self.assertEqual(recipe.tags.count(), 2)
+        self.assertIn(tag_indian, recipe.tags.all())
+        for tag in payload['tags']:
+            exists = Tag.objects.filter(name=tag['name'], user=self.user).exists()
+            self.assertTrue(exists)
+
+    def test_create_tag_on_update(self):
+        """Test creating a tag on a recipe."""
+        recipe = create_recipe(self.user)
+
+        payload = {
+            'tags': [{'name': 'Lunch'}]
+        }
+        url = detail_url(recipe.id)
+        response = self.client.patch(url, payload, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        recipe.refresh_from_db()
+        self.assertTrue(recipe.tags.filter(name='Lunch').exists())
+
+    def test_update_recipe_assign_tag(self):
+        """Test updating a recipe with an existing tag."""
+        tag_breakfast = Tag.objects.create(name='Breakfast', user=self.user)
+        recipe = create_recipe(self.user)
+        recipe.tags.add(tag_breakfast)
+
+        tag_lunch = Tag.objects.create(name='Lunch', user=self.user)
+        payload = {
+            'tags': [{'name': 'Lunch'}],
+        }
+        url = detail_url(recipe.id)
+        response = self.client.patch(url, payload, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        recipe.refresh_from_db()
+        self.assertIn(tag_lunch, recipe.tags.all())
+        self.assertNotIn(tag_breakfast, recipe.tags.all())
+
+    def test_clear_recipe_tags(self):
+        """Test clearing a recipe tags."""
+        tag = Tag.objects.create(name='Breakfast', user=self.user)
+        recipe = create_recipe(self.user)
+        recipe.tags.add(tag)
+        payload = {
+            'tags': [],
+        }
+        url = detail_url(recipe.id)
+        response = self.client.patch(url, payload, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        recipe.refresh_from_db()
+        self.assertEqual(recipe.tags.count(), 0)
