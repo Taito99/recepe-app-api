@@ -3,8 +3,8 @@ Tests for models
 """
 from django.test import TestCase
 from django.contrib.auth import get_user_model
-from decimal import Decimal
-from core.models import Recipe, Tag, Ingredient
+from unittest.mock import patch
+from core.models import Recipe, Tag, Ingredient, recipe_image_file_path
 
 def create_user(email="testuser@example,com", password="Passwordsd2323"):
     """Create a test user"""
@@ -88,3 +88,11 @@ class ModelTests(TestCase):
             name="Ingredient1"
         )
         self.assertEqual(str(ingredient), ingredient.name)
+
+    @patch('core.models.uuid.uuid4')
+    def test_recipe_file_name_uuid(self, mock_uuid):
+        """Test that a recipe can be saved as a file"""
+        uuid = 'test-uuid'
+        mock_uuid.return_value = uuid
+        file_path = recipe_image_file_path(None, 'example.jpg')
+        self.assertEqual(file_path, f'uploads/recipe/{uuid}.jpg')
