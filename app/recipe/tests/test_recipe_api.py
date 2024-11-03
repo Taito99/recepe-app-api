@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.template.defaultfilters import title
 from django.test import TestCase
 from django.urls import reverse
 from rest_framework import status
@@ -340,6 +341,46 @@ class PrivateRecipeApiTests(TestCase):
         response = self.client.patch(url, payload, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(recipe.ingredients.count(), 0)
+
+    def test_filter_by_tags(self):
+        """Test filtering by tags."""
+        r1 = create_recipe(self.user, title='Thai Vegetable Curry')
+        r2 = create_recipe(self.user, title='Turtle Curry')
+        tag1 = Tag.objects.create(name='Vegan', user=self.user)
+        tag2 = Tag.objects.create(name='Meat', user=self.user)
+        r1.tags.add(tag1)
+        r2.tags.add(tag2)
+        create_recipe(self.user, title="Fish")  # Recipe without any tags
+
+        params = {'tags': f'{tag1.id},{tag2.id}'}
+        response = self.client.get(RECIPES_URL, params)
+
+        s1 = RecipeSerializer(r1)
+        s2 = RecipeSerializer(r2)
+
+        self.assertIn(s1.data, response.data)
+        self.assertIn(s2.data, response.data)
+        self.assertEqual(len(response.data), 2)
+
+    def test_filter_by_ingredients(self):
+        """Test filtering by ingredients."""
+        r1 = create_recipe(self.user, title='Thai Vegetable Curry')
+        r2 = create_recipe(self.user, title='Turtle Curry')
+        in1 = Ingredient.objects.create(name="Olives", user=self.user)
+        in2 = Ingredient.objects.create(name="Salt", user=self.user)
+        r1.ingredients.add(in1)
+        r2.ingredients.add(in2)
+        create_recipe(self.user, title="Fish Fishy")  # Recipe without any ingredients
+
+        params = {'ingredients': f'{in1.id},{in2.id}'}
+        response = self.client.get(RECIPES_URL, params)
+
+        s1 = RecipeSerializer(r1)
+        s2 = RecipeSerializer(r2)
+
+        self.assertIn(s1.data, response.data)
+        self.assertIn(s2.data, response.data)
+        self.assertEqual(len(response.data), 2)
 
 
 class ImageUploadTest(TestCase):
