@@ -4,6 +4,7 @@
 
 # Docker
 .docker
+.env
 
 # Python
 **/__pycache__/
